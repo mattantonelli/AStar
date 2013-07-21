@@ -1,7 +1,12 @@
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.*;
 
 import javax.swing.*;
+import javax.swing.Timer;
 
 
 public class AStar extends JFrame {
@@ -12,9 +17,17 @@ public class AStar extends JFrame {
 	public static class AStarPanel extends JPanel {
 		
 		private static final long serialVersionUID = 1L;
-		private static LinkedList<Tile> path = new LinkedList<Tile>();
+		private static LinkedList<Tile> path = new LinkedList<Tile>(),
+				neighbors = new LinkedList<Tile>();
+		PriorityQueue<Tile> queue = new PriorityQueue<Tile>();
 		private Tile[][] tiles;
-		private Tile selectedTile;
+		private Tile startTile = null, endTile = null, selectedTile, bestTile;
+		private final Color defaultOutline = new Color(204, 0, 0), defaultFill = new Color(240, 49, 49),
+				startOutline = new Color(7, 157, 208), startFill = new Color(36, 173, 222),
+				endOutline = new Color(102, 153, 0), endFill = new Color(138, 189, 0),
+				selectedOutline = new Color(255, 138, 0), selectedFill = new Color(255, 174, 24);
+		private Timer timer;
+		private boolean isRunning = false;
 		
 		/**
 		 * Creates the grid used for path calculations
@@ -26,92 +39,87 @@ public class AStar extends JFrame {
 					tiles[x][y] = new Tile(x * 60, y * 60, 60, 60);
 				}
 			}
+			
+			addMouseListener(new MouseAction());
+			timer = new Timer(1000, new Update());
+			timer.start();
 		}
 		
 		/**
-		 * Selects start and end tiles, and calculates the shortest path between them
+		 * Initializes the path finder by setting values for start & end tile sand
+		 * adds the start tile to the queue
 		 */
-		public void run() {
-			// Tiles are referenced [x][y]
-			// X origin is on the left and Y origin is at the top of the grid
-			
-			Tile startTile = tiles[1][3];	// CHANGE START TILE HERE
-			startTile.setOutline(new Color(7, 157, 208));
-			startTile.setFill(new Color(36, 173, 222));
-			
-			Tile endTile = tiles[3][1];		// CHANGE END TILE HERE
-			endTile.setOutline(new Color(102, 153, 0));
-			endTile.setFill(new Color(138, 189, 0));
-			
-			// Manually set initial values for start and end tiles
-			// These values are explained more in the Tile class
+		private void run() {
 			startTile.setG(0);
 			startTile.setF(endTile);
 			endTile.setH(0);
 			
-			findShortestPath(startTile, endTile);	// Calculate shortest path
-			
-			// Creates the path by tracing back from the end tile
-			path.add(endTile);
-			while(path.peek().getPrev() != null) {
-				path.addFirst(path.peek().getPrev());
-			}
-			
-			// Highlights the path
-			for(Tile tile : path) {
-				if(tile != startTile && tile != endTile) {
-					tile.setOutline(new Color(255, 138, 0));
-					tile.setFill(new Color(255, 174, 24));
-				}
-			}
-			
-			repaint();
-			
-			// Prints the shortest path to the console
-//			System.out.println("Shortest path:\n");
-//			for(Tile tile : path) {
-//				tile.print();
-//			}
+			// A priority queue keeps tile with lowest F value on top
+			queue.add(startTile);	// Begin by adding the start tile
+			findShortestPath();	// Calculate shortest path
 		}
 		
-		private void findShortestPath(Tile startTile, Tile endTile) {
-			// A priority queue keeps tile with lowest F value on top
-			PriorityQueue<Tile> queue = new PriorityQueue<Tile>();
-			queue.add(startTile);	// Begin by adding the start tile
-			
-			// Continue until end is found. 
-			// Can result in infinite loop since the problem is NP-hard.
-			while(!queue.contains(endTile)) {
-				Tile best = queue.poll();	// Grab the best tile and remove from queue
-				selectedTile = best;		// Highlights selected tile in GUI
-				LinkedList<Tile> neighbors = getNeighbors(best);	// Find tile neighbors
-				int stepCost = best.getG() + 1;	// Set the G cost of travelling to neighbor
+		/**
+		 * Continuously called by the Timer to update the path and display progress.
+		 * This can be condensed to a single while loop for most practical uses.
+		 */
+		private void findShortestPath() {
+			if(queue.contains(endTile)) {
+				selectedTile = null;
 				
-				for(Tile neighbor : neighbors) {	// Iterate through all neighbors
-					if(stepCost < neighbor.getG()) {	// If new G is lower...
-						neighbor.setG(stepCost);	// Update new G cost
-						neighbor.setPrev(best);		// Update previous tile to reflect best path
-						neighbor.setF(endTile);		// Re-calculate F cost
-						queue.add(neighbor);		// Add neighbor to queue
-						try {
-							repaint();				// Draws new values in GUI
-							Thread.sleep(720);
-						} catch(InterruptedException e) {
-							e.printStackTrace();
-						}
+				// Creates the path by tracing back from the end tile
+				path.add(endTile);
+				while(path.peek().getPrev() != null) {
+					path.addFirst(path.peek().getPrev());
+				}
+				
+				// Highlights the path
+				for(Tile tile : path) {
+					if(tile != startTile && tile != endTile) {
+						tile.setOutline(selectedOutline);
+						tile.setFill(selectedFill);
 					}
 				}
-				// Prints the state of the queue to the console
-//				for(Tile tile : queue) {
-//					tile.print();
-//				}
-//				System.out.println();
+				isRunning = false;
+			} else {
+				// Continue until end is found.  Can result in infinite loop if 
+				// the end tile is not accessible since the problem is NP-hard.
+				updatePath();
 			}
-			selectedTile = null;	// De-select last tile used
-			return;
 		}
 		
-		private LinkedList<Tile> getNeighbors(Tile tile) {	// Adds all neighbors to list
+		/**
+		 * Executes a step in the calculation of the path. When a tile is examined, its
+		 * neighbors are added to a list and each neighbor is checked to see if moving
+		 * to it from the current tile will result in a more efficient path than one
+		 * that has already been established.
+		 */
+		private void updatePath() {
+			if(neighbors.isEmpty()) {
+				bestTile = queue.poll();			// Grab the best tile and remove from queue
+				selectedTile = bestTile;			// Highlights the selected tile in GUI
+				neighbors = getNeighbors(bestTile);	// Find the tile's neighbors
+			}
+			
+			int stepCost = bestTile.getG() + 1;	// Set the G cost of travelling to neighbor
+			
+			Tile neighbor = neighbors.pop();	// Check a neighbor...
+			if(stepCost < neighbor.getG()) {	// If new G is lower:
+				neighbor.setG(stepCost);		// Update new G cost
+				neighbor.setPrev(bestTile);		// Update previous tile to reflect best path
+				neighbor.setF(endTile);			// Re-calculate F cost
+				queue.add(neighbor);			// Add neighbor to queue
+			} else {
+				updatePath();	// Check another neighbor if there is no change. This is 
+								// only done to make the animation smoother.
+			}
+			
+		}
+		
+		/**
+		 * Adds all adjacent neighbors to list
+		 */
+		private LinkedList<Tile> getNeighbors(Tile tile) {
 			LinkedList<Tile> neighbors = new LinkedList<Tile>();
 			int x = tile.getX() / tile.getWidth();
 			int y = tile.getY() / tile.getHeight();
@@ -134,17 +142,84 @@ public class AStar extends JFrame {
 
 		@Override
 		protected void paintComponent(final Graphics gr) {
+			super.paintComponent(gr);
 			Graphics2D g = (Graphics2D)gr;
 			g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
 	                RenderingHints.VALUE_TEXT_ANTIALIAS_ON);	// Fancy text is the best text
 			
 			for(Tile[] row : tiles) {	// Draws tiles in the GUI
+				for(Tile tile : row) {
+					if(tile == selectedTile) {
+						tile.draw(g, true);
+					} else {
+						tile.draw(g, false);
+					}
+				}
+			}
+
+			g.setColor(Color.BLACK);
+			g.drawString("Left Click: Start tile     Right Click: End tile", 2, 313);
+		}
+		
+		public class Update implements ActionListener {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(isRunning && path.isEmpty()) {
+					findShortestPath();
+				}
+				repaint();
+			}
+		}
+		
+		// Controls selection of start end tiles. Tiles are referenced [x][y].
+		// X origin is on the left and Y origin is at the top of the grid.
+		private class MouseAction extends MouseAdapter {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if(e.getButton() == MouseEvent.BUTTON1 && !isRunning) {
+					if(!path.isEmpty()) {
+						resetTiles();
+					} else if(startTile != null) {
+						startTile.setOutline(defaultOutline);
+						startTile.setFill(defaultFill);
+					}
+					startTile = tiles[e.getX() / 60][e.getY() / 60];
+					startTile.setOutline(startOutline);
+					startTile.setFill(startFill);
+					
+				} else if(e.getButton() == MouseEvent.BUTTON3 && !isRunning) {
+					if(!path.isEmpty()) {
+						resetTiles();
+					} else if(endTile != null) {
+						endTile.setOutline(defaultOutline);
+						endTile.setFill(defaultFill);
+					}
+					endTile = tiles[e.getX() / 60][e.getY() / 60];
+					endTile.setOutline(endOutline);
+					endTile.setFill(endFill);
+				}
+				
+				repaint();
+				if(!isRunning && startTile != null && endTile != null) {
+					run();					
+					isRunning = true;
+					timer.restart();
+				}
+			}
+			
+			/**
+			 * Resets all of the tile values for calculating a new path.
+			 */
+			private void resetTiles() {
+				isRunning = false;
+				startTile = endTile = selectedTile = null;
+				path.clear();
+				queue.clear();
+				neighbors.clear();
+				for(Tile[] row : tiles) {
 					for(Tile tile : row) {
-						if(tile == selectedTile) {
-							tile.draw(g, true);
-						} else {
-							tile.draw(g, false);
-						}
+						tile.reset();
+					}
 				}
 			}
 		}
@@ -154,9 +229,9 @@ public class AStar extends JFrame {
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		AStarPanel panel = new AStarPanel();
 		frame.add(panel);
-		frame.setSize(317, 340);
+		frame.setSize(307, 345);
+		frame.setResizable(false);
 		frame.setVisible(true);
-		panel.run();
 	}
 	
 	public static void close() {

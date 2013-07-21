@@ -5,9 +5,10 @@ public class Tile implements Comparable<Tile> {
 	private Tile prev = null;	// Previous tile that was moved from. Used to keep track of path
 	private final int x, y, width, height;
 	private int f, g, h;		// F: Total cost. G: Actual cost. H: Estimated cost to reach end
-	private Color outline = new Color(204, 0, 0), fill = new Color(240, 49, 49);
-	private final static Color selectedOutline = new Color(255, 138, 0), 
-			selectedFill = new Color(255, 174, 24);
+	private final static Color defaultOutline = new Color(204, 0, 0), defaultFill = new Color(240, 49, 49),
+			selectedOutline = new Color(255, 138, 0), selectedFill = new Color(255, 174, 24);
+	private Color outline = defaultOutline, fill = defaultFill;
+	private final Font font = new Font("Consolas", Font.PLAIN, 11);
 
 	public Tile(int x, int y, int width, int height) {
 		this.x = x;
@@ -24,9 +25,9 @@ public class Tile implements Comparable<Tile> {
 		g.drawRect(x, y, width, height);
 		g.setColor(isSelected ? selectedFill : fill);
 		g.fillRect(x + 1, y + 1, width - 1, height - 1);
-		g.setColor(new Color(255, 255, 255));
-		g.setFont(new Font("Consolas", Font.PLAIN, 11));
-		if(f != Integer.MAX_VALUE) {
+		g.setColor(Color.WHITE);
+		g.setFont(font);
+		if(this.f != Integer.MAX_VALUE) {
 			g.drawString(("F: " + f), x + 20, y + 20);
 			g.drawString(("G: " + this.g), x + 20, y + 35);
 			g.drawString(("H: " + h), x + 20, y + 50);
@@ -39,10 +40,22 @@ public class Tile implements Comparable<Tile> {
 		if(prev != null) {
 			System.out.print("\tPrev: ");
 			prev.print();
-		}
-		
+		}	
 	}
 	
+	/**
+	 * Resets all of the tile values for calculating a new path
+	 */
+	public void reset() {
+		f = g = h = Integer.MAX_VALUE;
+		prev = null;
+		outline = defaultOutline;
+		fill = defaultFill;
+	}
+	
+	/**
+	 * Returns the tile's distance from the end tile using Manhattan Distance
+	 */
 	public int getDistance(Tile tile) {
 		return Math.abs(x - tile.x) / 60 + Math.abs(y - (tile.y)) / 60;
 	}
@@ -72,7 +85,7 @@ public class Tile implements Comparable<Tile> {
 	}
 	
 	public void setF(Tile tile) {
-		h = getDistance(tile);	// Calculate estimated distance to end using Manhattan Distance
+		h = getDistance(tile);	// Calculate estimated distance to the end tile
 		f = g + h;	// Set F equal to the sum of steps taken (G) and remaining steps estimated (H)
 	}
 
