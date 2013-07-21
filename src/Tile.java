@@ -5,7 +5,9 @@ public class Tile implements Comparable<Tile> {
 	private Tile prev = null;	// Previous tile that was moved from. Used to keep track of path
 	private final int x, y, width, height;
 	private int f, g, h;		// F: Total cost. G: Actual cost. H: Estimated cost to reach end
+	private boolean isObstacle = false;
 	private final static Color defaultOutline = new Color(204, 0, 0), defaultFill = new Color(240, 49, 49),
+			obstacleOutline = new Color(153, 51, 204), obstacleFill = new Color(186, 117, 220),
 			selectedOutline = new Color(255, 138, 0), selectedFill = new Color(255, 174, 24);
 	private Color outline = defaultOutline, fill = defaultFill;
 	private final Font font = new Font("Consolas", Font.PLAIN, 11);
@@ -49,8 +51,10 @@ public class Tile implements Comparable<Tile> {
 	public void reset() {
 		f = g = h = Integer.MAX_VALUE;
 		prev = null;
-		outline = defaultOutline;
-		fill = defaultFill;
+		if(!isObstacle) {
+			outline = defaultOutline;
+			fill = defaultFill;
+		}
 	}
 	
 	/**
@@ -111,6 +115,24 @@ public class Tile implements Comparable<Tile> {
 
 	public void setPrev(Tile prev) {
 		this.prev = prev;
+	}
+	
+	public boolean isObstacle() {
+		return isObstacle;
+	}
+
+	/**
+	 * Toggles a tile as an impassable obstacle
+	 */
+	public void toggleObstacle() {
+		isObstacle = !isObstacle;
+		if(isObstacle) {
+			outline = obstacleOutline;
+			fill = obstacleFill;
+		} else {
+			outline = defaultOutline;
+			fill = defaultFill;
+		}
 	}
 	
 	public void setOutline(Color outline) {

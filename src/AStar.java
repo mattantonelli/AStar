@@ -1,6 +1,8 @@
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.*;
@@ -27,20 +29,23 @@ public class AStar extends JFrame {
 				endOutline = new Color(102, 153, 0), endFill = new Color(138, 189, 0),
 				selectedOutline = new Color(255, 138, 0), selectedFill = new Color(255, 174, 24);
 		private Timer timer;
-		private boolean isRunning = false;
+		private boolean isRunning = false, isCtrlDown;
 		
 		/**
 		 * Creates the grid used for path calculations
 		 */
 		public AStarPanel() {
-			tiles = new Tile[5][5];
-			for(int y = 0; y < 5; y++) {
-				for(int x = 0; x < 5; x++) {
+			tiles = new Tile[8][8];
+			for(int y = 0; y < tiles.length; y++) {
+				for(int x = 0; x < tiles[0].length; x++) {
 					tiles[x][y] = new Tile(x * 60, y * 60, 60, 60);
 				}
 			}
 			
+			setBackground(Color.WHITE);
 			addMouseListener(new MouseAction());
+			addKeyListener(new KeyboardAction());
+			setFocusable(true);
 			timer = new Timer(1000, new Update());
 			timer.start();
 		}
@@ -104,7 +109,7 @@ public class AStar extends JFrame {
 			int stepCost = bestTile.getG() + 1;	// Set the G cost of travelling to neighbor
 			
 			Tile neighbor = neighbors.pop();	// Check a neighbor...
-			if(stepCost < neighbor.getG()) {	// If new G is lower:
+			if(!neighbor.isObstacle() && stepCost < neighbor.getG()) {	// If new G is lower:
 				neighbor.setG(stepCost);		// Update new G cost
 				neighbor.setPrev(bestTile);		// Update previous tile to reflect best path
 				neighbor.setF(endTile);			// Re-calculate F cost
@@ -158,7 +163,7 @@ public class AStar extends JFrame {
 			}
 
 			g.setColor(Color.BLACK);
-			g.drawString("Left Click: Start tile     Right Click: End tile", 2, 313);
+			g.drawString("Left Click: Start tile     Ctrl+Click: Obstacle     Right Click: End tile", 18, 493);
 		}
 		
 		public class Update implements ActionListener {
@@ -176,7 +181,10 @@ public class AStar extends JFrame {
 		private class MouseAction extends MouseAdapter {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				if(e.getButton() == MouseEvent.BUTTON1 && !isRunning) {
+				if(e.getButton() == MouseEvent.BUTTON1 && isCtrlDown && !isRunning) {
+					Tile tile = tiles[e.getX() / 60][e.getY() / 60];
+					if(tile != startTile && tile != endTile) tile.toggleObstacle();
+				} else if(e.getButton() == MouseEvent.BUTTON1 && !isRunning) {
 					if(!path.isEmpty()) {
 						resetTiles();
 					} else if(startTile != null) {
@@ -186,7 +194,6 @@ public class AStar extends JFrame {
 					startTile = tiles[e.getX() / 60][e.getY() / 60];
 					startTile.setOutline(startOutline);
 					startTile.setFill(startFill);
-					
 				} else if(e.getButton() == MouseEvent.BUTTON3 && !isRunning) {
 					if(!path.isEmpty()) {
 						resetTiles();
@@ -200,7 +207,7 @@ public class AStar extends JFrame {
 				}
 				
 				repaint();
-				if(!isRunning && startTile != null && endTile != null) {
+				if(!isRunning && startTile != null && endTile != null && path.isEmpty()) {
 					run();					
 					isRunning = true;
 					timer.restart();
@@ -223,13 +230,26 @@ public class AStar extends JFrame {
 				}
 			}
 		}
+		
+		private class KeyboardAction extends KeyAdapter {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if(e.getKeyCode() == KeyEvent.VK_CONTROL) isCtrlDown = true;
+			}
+			
+			@Override
+			public void keyReleased(KeyEvent e) {
+				if(e.getKeyCode() == KeyEvent.VK_CONTROL) isCtrlDown = false;
+			}
+		}
 	}
 	
 	public static void main(String[] args) {
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		AStarPanel panel = new AStarPanel();
 		frame.add(panel);
-		frame.setSize(307, 345);
+		// width + 7, height + 45
+		frame.setSize(487, 525);
 		frame.setResizable(false);
 		frame.setVisible(true);
 	}
