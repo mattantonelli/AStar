@@ -4,7 +4,7 @@
 ========
 
 This Java application implements the A* search algorithm on a two-dimensional 5x5 grid. No movement cost
-is associated with any of the tiles of the grid, and no obstacle handling exists minus the size of the grid.
+is associated with any of the tiles of the grid.
 
 Each tile is tied with three variables:
 <ol><li>F: The total cost to reach the end tile. (G + H)</li>
@@ -17,6 +17,23 @@ start tile and the end tile are highlighted in <i>yellow</i>.
 
 Each tile's F, G, and H values are modified as they are reached in the path calculation.
 
-The start and end tiles can be modified from the <i>run</i> method in <i>AStar.java</i>.
+The render speed of the path can be increased by lowering the value of DELAY.
 
-In a possible future update, start and end tiles will be selected through mouse input, which will calculate a new shortest path.
+	private final int DELAY = 200;
+
+Instructions:
+<ul><li>Left click: Select start tile</li>
+<li>Ctrl + Click: Set obstacle</li>
+<li>Right click: Select end tile</li>
+
+
+
+Sample Runs:
+
+![Sample Run 1](http://tunabytes.com/imgdump/astar1.png)
+
+![Sample Run 2](http://tunabytes.com/imgdump/astar2.png)
+
+![Sample Run 3](http://tunabytes.com/imgdump/astar3.png)
+
+![Sample Run 4](http://tunabytes.com/imgdump/astar4.png)

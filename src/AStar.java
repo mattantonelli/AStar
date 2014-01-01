@@ -29,6 +29,7 @@ public class AStar extends JFrame {
 				endOutline = new Color(102, 153, 0), endFill = new Color(138, 189, 0),
 				selectedOutline = new Color(255, 138, 0), selectedFill = new Color(255, 174, 24);
 		private Timer timer;
+		private final int DELAY = 200;
 		private boolean isRunning = false, isCtrlDown;
 		
 		/**
@@ -46,7 +47,7 @@ public class AStar extends JFrame {
 			addMouseListener(new MouseAction());
 			addKeyListener(new KeyboardAction());
 			setFocusable(true);
-			timer = new Timer(1000, new Update());
+			timer = new Timer(DELAY, new Update());
 			timer.start();
 		}
 		
@@ -181,27 +182,27 @@ public class AStar extends JFrame {
 		private class MouseAction extends MouseAdapter {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				Tile tile = tiles[e.getX() / 60][e.getY() / 60];
 				if(e.getButton() == MouseEvent.BUTTON1 && isCtrlDown && !isRunning) {
-					Tile tile = tiles[e.getX() / 60][e.getY() / 60];
 					if(tile != startTile && tile != endTile) tile.toggleObstacle();
-				} else if(e.getButton() == MouseEvent.BUTTON1 && !isRunning) {
+				} else if(e.getButton() == MouseEvent.BUTTON1 && !isRunning && tile != endTile) {
 					if(!path.isEmpty()) {
 						resetTiles();
 					} else if(startTile != null) {
 						startTile.setOutline(defaultOutline);
 						startTile.setFill(defaultFill);
 					}
-					startTile = tiles[e.getX() / 60][e.getY() / 60];
+					startTile = tile;
 					startTile.setOutline(startOutline);
 					startTile.setFill(startFill);
-				} else if(e.getButton() == MouseEvent.BUTTON3 && !isRunning) {
+				} else if(e.getButton() == MouseEvent.BUTTON3 && !isRunning && tile != startTile) {
 					if(!path.isEmpty()) {
 						resetTiles();
 					} else if(endTile != null) {
 						endTile.setOutline(defaultOutline);
 						endTile.setFill(defaultFill);
 					}
-					endTile = tiles[e.getX() / 60][e.getY() / 60];
+					endTile = tile;
 					endTile.setOutline(endOutline);
 					endTile.setFill(endFill);
 				}
