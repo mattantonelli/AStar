@@ -2,7 +2,7 @@ A* Search Algorithm
 ========
 <i>Implemented by: Matt Antonelli</i>
 
-This Java application implements the A* search algorithm on a two-dimensional 5x5 grid. No movement cost
+This Java application implements the A* search algorithm on a two-dimensional grid. No movement cost
 is associated with any of the tiles of the grid.
 
 Each tile is tied with three variables:
